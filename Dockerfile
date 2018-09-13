@@ -93,7 +93,7 @@ RUN set -ex \
 	&& echo 'extension=redis.so' > ${PHP_INI_DIR}/conf.d/redis.ini \
 	\
 	&& { \
-				echo 'extension=opcache.so'; \
+				echo 'zend_extension=opcache.so'; \
                 echo 'opcache.memory_consumption=128'; \
                 echo 'opcache.interned_strings_buffer=8'; \
                 echo 'opcache.max_accelerated_files=4000'; \
