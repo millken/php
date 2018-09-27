@@ -4,8 +4,6 @@ ENV TIMEZONE Asia/Shanghai
 ENV PHP_VERSION 7.2.10
 ENV PROTOBUF_VERSION 3.6.1
 ENV REDIS_VERSION 4.1.1
-ENV SWOOLE_VERSION 4.2.1
-ENV YAC_VERSION 2.0.2
 ENV COMPOSER_VERSION 1.7.2
 
 ENV PHP_EXTRA_CONFIGURE_ARGS --enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data --disable-cgi
@@ -41,7 +39,7 @@ RUN set -ex \
 	&& ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime 		
 RUN set -ex \
 	&& cd /tmp/ \
-	&& ([ -f /tmp/php-${PHP_VERSION}.tar.xz ] || wget http://hk2.php.net/distributions/php-${PHP_VERSION}.tar.xz) \
+	&& wget http://hk2.php.net/distributions/php-${PHP_VERSION}.tar.xz \
 	&& tar xf php-${PHP_VERSION}.tar.xz \
 	&& apk add --no-cache --virtual .build-deps git mysql-client curl-dev openssh-client libffi-dev postgresql-dev hiredis-dev zlib-dev icu-dev libxml2-dev freetype-dev libpng-dev libjpeg-turbo-dev g++ make autoconf \
 	&& export CFLAGS="$PHP_CFLAGS" \
@@ -54,16 +52,17 @@ RUN set -ex \
 	&& make install \
 	&& make clean \
 	&& cd /tmp/ \	
-    && ([ -f /tmp/swoole-${SWOOLE_VERSION}.tgz ] || wget http://pecl.php.net/get/swoole-${SWOOLE_VERSION}.tgz) \
-	&& tar xf swoole-${SWOOLE_VERSION}.tgz \
-	&& cd /tmp/swoole-${SWOOLE_VERSION} \
+    && wget https://github.com/swoole/swoole-src/archive/master.zip \
+	&& unzip master.zip \
+	&& unlink master.zip \
+	&& cd /tmp/swoole-src-master \
 	&& phpize \
 	&& ./configure --enable-async-redis --enable-openssl --enable-coroutine-postgresql --enable-sockets=/usr/local/include/php/ext/sockets \
 	&& make -j8 && make install \
 	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
 	\
 	&& cd /tmp/ \
-    && ([ -f /tmp/protobuf-${PROTOBUF_VERSION}.tgz ] || wget http://pecl.php.net/get/protobuf-${PROTOBUF_VERSION}.tgz) \
+    && wget http://pecl.php.net/get/protobuf-${PROTOBUF_VERSION}.tgz \
 	&& tar xf protobuf-${PROTOBUF_VERSION}.tgz \
 	&& cd /tmp/protobuf-${PROTOBUF_VERSION} \
 	&& phpize \
@@ -72,9 +71,10 @@ RUN set -ex \
 	&& echo 'extension=protobuf.so' > ${PHP_INI_DIR}/conf.d/protobuf.ini \
 	\
 	&& cd /tmp/ \
-    && ([ -f /tmp/yac-${YAC_VERSION}.tgz ] || wget http://pecl.php.net/get/yac-${YAC_VERSION}.tgz) \
-	&& tar xf yac-${YAC_VERSION}.tgz \
-	&& cd /tmp/yac-${YAC_VERSION} \
+    &&  wget https://github.com/laruence/yac/archive/master.zip \
+	&& unzip master.zip \
+	&& unlink master.zip \
+	&& cd /tmp/yac-master \
 	&& phpize \
 	&& ./configure \
 	&& make && make install \
@@ -84,7 +84,7 @@ RUN set -ex \
 	} | tee > ${PHP_INI_DIR}/conf.d/yac.ini \
 	\	
 	&& cd /tmp/ \
-    && ([ -f /tmp/redis-${REDIS_VERSION}.tgz ] || wget http://pecl.php.net/get/redis-${REDIS_VERSION}.tgz) \
+    && wget http://pecl.php.net/get/redis-${REDIS_VERSION}.tgz \
 	&& tar xf redis-${REDIS_VERSION}.tgz \
 	&& cd /tmp/redis-${REDIS_VERSION} \
 	&& phpize \
