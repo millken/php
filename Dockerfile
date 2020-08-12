@@ -103,7 +103,7 @@ RUN set -ex \
                 echo 'opcache.enable_cli=1'; \
     } | tee > ${PHP_INI_DIR}/conf.d/opcache.ini \
 	&& cd /tmp/ \
-	&& wget https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar) \
+	&& wget https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar \
     && cp /tmp/composer.phar /usr/local/bin/composer \
     && chmod +x /usr/local/bin/composer \
     && apk del .build-deps \
