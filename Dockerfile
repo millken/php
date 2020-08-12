@@ -1,10 +1,9 @@
-FROM alpine:3.7
+FROM alpine:3.12
 
-ENV TIMEZONE Asia/Shanghai
-ENV PHP_VERSION 7.2.10
-ENV PROTOBUF_VERSION 3.6.1
+ENV PHP_VERSION 7.4.9
+ENV SWOOLE_VERSION 4.4.16
 ENV REDIS_VERSION 4.1.1
-ENV COMPOSER_VERSION 1.7.2
+ENV COMPOSER_VERSION 1.10.10
 
 ENV PHP_EXTRA_CONFIGURE_ARGS --enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data --disable-cgi
 
@@ -13,7 +12,7 @@ ENV PHP_CPPFLAGS="$PHP_CFLAGS"
 ENV PHP_LDFLAGS="-Wl,-O1 -Wl,--hash-style=both -pie"
 
 LABEL Maintainer="millken <millken@gmail.com>" \
-      Description="Lightweight php 7.2 container based on alpine with Composer installed and swoole installed." 
+      Description="Lightweight php ${PHP_VERSION} container based on alpine with Composer installed and swoole installed." 
 
 RUN set -x \
 	&& addgroup -g 82 -S www-data \
@@ -24,7 +23,7 @@ RUN mkdir -p ${PHP_INI_DIR}/conf.d
 
 # persistent / runtime deps
 RUN set -ex \
-	&& sed -i 's/dl-cdn.alpinelinux.org/mirrors.shu.edu.cn/g' /etc/apk/repositories \
+	#&& sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories \
   	&& apk update \
 	&& apk add --no-cache --virtual .persistent-deps \
 		curl \
@@ -34,41 +33,42 @@ RUN set -ex \
 		libxml2 \
 		hiredis \
 		libstdc++ \
-		tzdata \
-	&& echo "${TIMEZONE}" > /etc/timezone \ 
-	&& ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime 		
+		tzdata 		
 RUN set -ex \
 	&& cd /tmp/ \
-	&& wget http://hk2.php.net/distributions/php-${PHP_VERSION}.tar.xz \
+	#&& wget http://mirrors.sohu.com/php/php-7.4.9.tar.xz \
+	&& wget http://www.php.net/distributions/php-${PHP_VERSION}.tar.xz \
 	&& tar xf php-${PHP_VERSION}.tar.xz \
-	&& apk add --no-cache --virtual .build-deps git mysql-client curl-dev openssh-client libffi-dev postgresql-dev hiredis-dev zlib-dev icu-dev libxml2-dev freetype-dev libpng-dev libjpeg-turbo-dev g++ make autoconf \
+	&& apk add --no-cache --virtual .build-deps git mysql-client curl-dev oniguruma-dev openssh-client libffi-dev postgresql-dev hiredis-dev zlib-dev icu-dev libxml2-dev freetype-dev libpng-dev libjpeg-turbo-dev g++ make autoconf sqlite-dev \
 	&& export CFLAGS="$PHP_CFLAGS" \
 		CPPFLAGS="$PHP_CPPFLAGS" \
 		LDFLAGS="$PHP_LDFLAGS" \
     && cd /tmp/php-${PHP_VERSION} \
-    && ./configure --enable-inline-optimization --prefix=/usr/local --with-config-file-path="${PHP_INI_DIR}" --enable-opcache --with-config-file-scan-dir="${PHP_INI_DIR}/conf.d"  --enable-posix  --enable-sysvshm --enable-sysvsem --enable-sigchild --enable-mbstring --with-iconv  --with-pdo-pgsql -with-pdo-mysql -with-pgsql=/usr/local/pgsql  --with-zlib-dir=/usr/include/ --enable-bcmath --with-openssl --enable-pdo --enable-session --enable-tokenizer --enable-hash --enable-json --disable-debug --disable-short-tags --disable-ipv6 --enable-option-checking=fatal --with-mhash --with-curl \
+    && ./configure --enable-inline-optimization --prefix=/usr/local --with-config-file-path="${PHP_INI_DIR}" --enable-opcache --with-config-file-scan-dir="${PHP_INI_DIR}/conf.d"  --enable-posix  --enable-sysvshm --enable-sysvsem --enable-sigchild --enable-mbstring --with-iconv  --with-pdo-pgsql -with-pdo-mysql -with-pgsql=/usr/local/pgsql  --with-zlib-dir=/usr/include/ --enable-bcmath --with-openssl --enable-pdo --enable-session --enable-tokenizer --enable-json --disable-debug --disable-short-tags --disable-ipv6 --enable-option-checking=fatal --with-mhash --with-curl --without-sqlite3 \
 	$PHP_EXTRA_CONFIGURE_ARGS \
     && make -j8 \
 	&& make install \
 	&& make clean \
+	&& mkdir -p ${PHP_INI_DIR}/conf.d \
 	&& cd /tmp/ \	
-    && wget https://github.com/swoole/swoole-src/archive/master.zip \
-	&& unzip master.zip \
-	&& unlink master.zip \
-	&& cd /tmp/swoole-src-master \
+    && wget https://github.com/swoole/swoole-src/archive/v${SWOOLE_VERSION}.tar.gz \
+	&& tar xf v${SWOOLE_VERSION}.tar.gz \
+	&& unlink v${SWOOLE_VERSION}.tar.gz \
+	&& cd /tmp/swoole-src-${SWOOLE_VERSION} \
 	&& phpize \
-	&& ./configure --enable-async-redis --enable-openssl --enable-coroutine-postgresql --enable-sockets=/usr/local/include/php/ext/sockets \
+	&& ./configure --enable-openssl --enable-http2 --enable-sockets=/usr/local/include/php/ext/sockets \
 	&& make -j8 && make install \
-	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
+	&& echo 'extension=swoole_async.so' > ${PHP_INI_DIR}/conf.d/swoole_async.ini \
 	\
-	&& cd /tmp/ \
-    && wget http://pecl.php.net/get/protobuf-${PROTOBUF_VERSION}.tgz \
-	&& tar xf protobuf-${PROTOBUF_VERSION}.tgz \
-	&& cd /tmp/protobuf-${PROTOBUF_VERSION} \
+	&& cd /tmp/ \	
+    && wget https://github.com/swoole/ext-async/archive/v${SWOOLE_VERSION}.tar.gz \
+	&& tar xf v${SWOOLE_VERSION}.tar.gz \
+	&& unlink v${SWOOLE_VERSION}.tar.gz \
+	&& cd /tmp/ext-async-${SWOOLE_VERSION} \
 	&& phpize \
 	&& ./configure \
 	&& make -j8 && make install \
-	&& echo 'extension=protobuf.so' > ${PHP_INI_DIR}/conf.d/protobuf.ini \
+	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
 	\
 	&& cd /tmp/ \
     &&  wget https://github.com/laruence/yac/archive/master.zip \
@@ -76,11 +76,12 @@ RUN set -ex \
 	&& unlink master.zip \
 	&& cd /tmp/yac-master \
 	&& phpize \
-	&& ./configure \
+	&& ./configure --enable-msgpack\
 	&& make && make install \
 	&& { \
 		echo 'extension=yac.so'; \
 		echo 'yac.enable_cli=1'; \
+		echo 'yac.serializer=msgpack'; \
 	} | tee > ${PHP_INI_DIR}/conf.d/yac.ini \
 	\	
 	&& cd /tmp/ \
@@ -102,7 +103,7 @@ RUN set -ex \
                 echo 'opcache.enable_cli=1'; \
     } | tee > ${PHP_INI_DIR}/conf.d/opcache.ini \
 	&& cd /tmp/ \
-	&& ([ -f /tmp/composer.phar ] || wget https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar) \
+	&& wget https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar) \
     && cp /tmp/composer.phar /usr/local/bin/composer \
     && chmod +x /usr/local/bin/composer \
     && apk del .build-deps \
