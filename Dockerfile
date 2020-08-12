@@ -58,7 +58,7 @@ RUN set -ex \
 	&& phpize \
 	&& ./configure --enable-openssl --enable-http2 --enable-sockets=/usr/local/include/php/ext/sockets \
 	&& make -j8 && make install \
-	&& echo 'extension=swoole_async.so' > ${PHP_INI_DIR}/conf.d/swoole_async.ini \
+	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
 	\
 	&& cd /tmp/ \	
     && wget https://github.com/swoole/ext-async/archive/v${SWOOLE_VERSION}.tar.gz \
@@ -68,7 +68,7 @@ RUN set -ex \
 	&& phpize \
 	&& ./configure \
 	&& make -j8 && make install \
-	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
+	&& echo 'extension=swoole_async.so' > ${PHP_INI_DIR}/conf.d/swoole_async.ini \
 	\
 	&& cd /tmp/ \
     &&  wget https://github.com/laruence/yac/archive/master.zip \
