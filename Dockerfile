@@ -3,6 +3,7 @@ FROM alpine:3.12
 ENV PHP_VERSION 7.4.9
 ENV SWOOLE_VERSION 4.4.16
 ENV REDIS_VERSION 4.1.1
+ENV MSGPACK_VERSION 2.1.1
 ENV COMPOSER_VERSION 1.10.10
 
 ENV PHP_EXTRA_CONFIGURE_ARGS --enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data --disable-cgi
@@ -33,6 +34,9 @@ RUN set -ex \
 		libxml2 \
 		hiredis \
 		libstdc++ \
+		sqlite-libs \
+		oniguruma \
+		brotli-libs \
 		tzdata 		
 RUN set -ex \
 	&& cd /tmp/ \
@@ -60,6 +64,15 @@ RUN set -ex \
 	&& make -j8 && make install \
 	&& echo 'extension=swoole.so' > ${PHP_INI_DIR}/conf.d/swoole.ini \
 	\
+	&& cd /tmp/ \
+    && wget http://pecl.php.net/get/msgpack-${MSGPACK_VERSION}.tgz \
+	&& tar xf msgpack-${MSGPACK_VERSION}.tgz \
+	&& cd /tmp/msgpack-${MSGPACK_VERSION} \
+	&& phpize \
+	&& ./configure \
+	&& make -j8 && make install \
+	&& echo 'extension=msgpack.so' > ${PHP_INI_DIR}/conf.d/msgpack.ini \
+	\
 	&& cd /tmp/ \	
     && wget https://github.com/swoole/ext-async/archive/v${SWOOLE_VERSION}.tar.gz \
 	&& tar xf v${SWOOLE_VERSION}.tar.gz \
@@ -76,7 +89,7 @@ RUN set -ex \
 	&& unlink master.zip \
 	&& cd /tmp/yac-master \
 	&& phpize \
-	&& ./configure --enable-msgpack\
+	&& ./configure --enable-msgpack \
 	&& make && make install \
 	&& { \
 		echo 'extension=yac.so'; \
@@ -94,7 +107,7 @@ RUN set -ex \
 	&& echo 'extension=redis.so' > ${PHP_INI_DIR}/conf.d/redis.ini \
 	\
 	&& { \
-				echo 'zend_extension=opcache.so'; \
+                echo 'zend_extension=opcache.so'; \
                 echo 'opcache.memory_consumption=128'; \
                 echo 'opcache.interned_strings_buffer=8'; \
                 echo 'opcache.max_accelerated_files=4000'; \
